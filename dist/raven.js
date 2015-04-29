@@ -1,4 +1,4 @@
-/*! Raven.js 1.1.18 (8ad15bc) | github.com/getsentry/raven-js */
+/*! Raven.js 1.1.18 (498afd0) | github.com/getsentry/raven-js */
 
 /*
  * Includes TraceKit
@@ -1312,6 +1312,121 @@ var Raven = {
         return Raven;
     },
 
+
+  /*********************************************************************
+   *********************************************************************
+   *********************************************************************
+   *********************************************************************
+   *********************************************************************
+   BEGIN OF FORK CHANGES
+   *********************************************************************
+   *********************************************************************
+   *********************************************************************
+   *********************************************************************
+   */
+
+   /**
+      * Normalize stacktrace for use with Sentry
+      *
+      * @method getNormalizedStackTrace
+      * @param stack
+      * @returns {Array}
+      * @private
+      */
+     getNormalizedStackTrace: function(stack) {
+       var normalizedStackTrace = [];
+       for (var i = stack.length - 1; i > 0; i-- ) {
+         normalizedStackTrace.push({
+           filename: stack[i].url,
+           lineno: stack[i].line,
+           colno: stack[i].column,
+           'function': stack[i].func || '?',
+           post_context: stack[i].context[4],
+           context_line: stack[i].context[3],
+           pre_context: stack[i].context[2]
+         });
+       }
+       return normalizedStackTrace;
+     },
+
+     /**
+      * Recursive method which computes and returns array with exceptions.
+      * Each exception in array is transformed to proper format for use with Sentry.
+      *
+      * @method getArrayOfExceptionsFromException
+      * @param {BaseError} exception
+      * @param {[]} arrayOfExceptions
+      * @returns {[]}
+      * @private
+      */
+     getArrayOfExceptionsFromException: function (exception, arrayOfExceptions) {
+       if (!exception) {
+         return arrayOfExceptions;
+       }
+       this.getArrayOfExceptionsFromException(exception.previous, arrayOfExceptions);
+
+       var computedException = TraceKit.computeStackTrace(exception);
+       var normalizedStackTrace = this.getNormalizedStackTrace(computedException.stack);
+
+       arrayOfExceptions.pushObject({
+         type: computedException.name,
+         value: computedException.message,
+         stacktrace: {
+           frames: normalizedStackTrace
+         }
+       });
+       return arrayOfExceptions;
+     },
+
+     /**
+      * Returns url of file where the error was thrown
+      *
+      * @method getNameOfFile
+      * @param arrayOfExceptions
+      * @returns {String}
+      * @private
+      */
+     getNameOfFile: function (arrayOfExceptions) {
+       var stackRecords = arrayOfExceptions[arrayOfExceptions.length - 1].stacktrace.frames;
+       return stackRecords[stackRecords.length - 1].filename;
+     },
+
+     /**
+      * Entry point for capturing exception with parents
+      *
+      * @method captureExceptionWithParents
+      * @param {BaseError} exception
+      * @returns Raven
+      */
+     captureExceptionWithParents: function (exception) {
+       var arrayOfExceptions = this.getArrayOfExceptionsFromException(exception, []);
+       send(
+         {
+           exception: arrayOfExceptions,
+           culprit: this.getNameOfFile(arrayOfExceptions),
+           message: exception.message
+         }
+       );
+       return Raven;
+     },
+
+
+  /*********************************************************************
+   *********************************************************************
+   *********************************************************************
+   *********************************************************************
+   *********************************************************************
+
+   END OF FORK CHANGES
+
+   *********************************************************************
+   *********************************************************************
+   *********************************************************************
+   *********************************************************************
+   *********************************************************************
+   *********************************************************************
+   */
+
     /*
      * Manually send a message to Sentry
      *
@@ -1475,7 +1590,7 @@ function parseDSN(str) {
 }
 
 function isUndefined(what) {
-    return typeof what === 'undefined';
+    return what === void 0;
 }
 
 function isFunction(what) {
@@ -1483,7 +1598,7 @@ function isFunction(what) {
 }
 
 function isString(what) {
-    return typeof what === 'string';
+    return objectPrototype.toString.call(what) === '[object String]';
 }
 
 function isObject(what) {
@@ -1776,7 +1891,7 @@ function send(data) {
 
 
 function makeRequest(data) {
-    var img = new Image(),
+    var img = newImage(),
         src = globalServer + authQueryString + '&sentry_data=' + encodeURIComponent(JSON.stringify(data));
 
     img.crossOrigin = 'anonymous';
@@ -1793,6 +1908,13 @@ function makeRequest(data) {
         });
     };
     img.src = src;
+}
+
+// Note: this is shitty, but I can't figure out how to get
+// sinon to stub document.createElement without breaking everything
+// so this wrapper is just so I can stub it for tests.
+function newImage() {
+    return document.createElement('img');
 }
 
 function isSetup() {
