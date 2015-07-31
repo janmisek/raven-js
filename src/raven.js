@@ -333,23 +333,24 @@ var Raven = {
      },
 
      /**
-      * Entry point for capturing exception with parents
-      *
-      * @method captureExceptionWithParents
-      * @param {BaseError} exception
-      * @returns Raven
-      */
-     captureExceptionWithParents: function (exception) {
-       var arrayOfExceptions = this.getArrayOfExceptionsFromException(exception, []);
-       send(
-         {
-           exception: arrayOfExceptions,
-           culprit: this.getNameOfFile(arrayOfExceptions),
-           message: exception.message
-         }
-       );
-       return Raven;
-     },
+       * Entry point for capturing exception with parents
+       *
+       * @method captureExceptionWithParents
+       * @param {BaseError} exception
+       * @param {Object} options
+       * @returns Raven
+       */
+      captureExceptionWithParents: function (exception, options) {
+          var arrayOfExceptions = this.getArrayOfExceptionsFromException(exception, []);
+          send(
+              objectMerge({
+                  exception: arrayOfExceptions,
+                  culprit: this.getNameOfFile(arrayOfExceptions),
+                  message: exception.message
+              }, options)
+          );
+          return Raven;
+      },
 
 
   /*********************************************************************
