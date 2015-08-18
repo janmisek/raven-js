@@ -1,4 +1,4 @@
-/*! Raven.js 1.2.1 (37fcb1e) | github.com/getsentry/raven-js */
+/*! Raven.js 1.2.1 (499584b) | github.com/getsentry/raven-js */
 
 /*
  * Includes TraceKit
@@ -1325,91 +1325,119 @@ var Raven = {
    *********************************************************************
    */
 
-   /**
-      * Normalize stacktrace for use with Sentry
-      *
-      * @method getNormalizedStackTrace
-      * @param stack
-      * @returns {Array}
-      * @private
-      */
-     getNormalizedStackTrace: function(stack) {
-       var normalizedStackTrace = [];
-       for (var i = stack.length - 1; i >= 0; i-- ) {
-         normalizedStackTrace.push({
-           filename: stack[i].url,
-           lineno: stack[i].line,
-           colno: stack[i].column,
-           'function': stack[i].func || '?',
-           post_context: stack[i].context[4],
-           context_line: stack[i].context[3],
-           pre_context: stack[i].context[2]
-         });
-       }
-       return normalizedStackTrace;
-     },
+    /**
+     * Normalize stacktrace for use with Sentry
+     *
+     * @method getNormalizedStackTrace
+     * @param stack
+     * @returns {Array}
+     * @private
+     */
+    getNormalizedStackTrace: function(stack) {
+        var normalizedStackTrace = [];
+        if (stack && stack.length) {
+            for (var i = stack.length - 1; i >= 0; i-- ) {
+                normalizedStackTrace.push({
+                    filename: stack[i].url,
+                    lineno: stack[i].line,
+                    colno: stack[i].column,
+                    'function': stack[i].func || '?',
+                    post_context: stack[i].context[4],
+                    context_line: stack[i].context[3],
+                    pre_context: stack[i].context[2]
+                });
+            }
+        } else {
+            normalizedStackTrace.push({
+                filename: 'undefined',
+                lineno: 0,
+                colno: 0,
+                'function': 'undefined'
+            });
 
-     /**
-      * Recursive method which computes and returns array with exceptions.
-      * Each exception in array is transformed to proper format for use with Sentry.
-      *
-      * @method getArrayOfExceptionsFromException
-      * @param {BaseError} exception
-      * @param {[]} arrayOfExceptions
-      * @returns {[]}
-      * @private
-      */
-     getArrayOfExceptionsFromException: function (exception, arrayOfExceptions) {
-       if (!exception) {
-         return arrayOfExceptions;
-       }
-       this.getArrayOfExceptionsFromException(exception.previous, arrayOfExceptions);
+        }
+        return normalizedStackTrace;
+    },
 
-       var computedException = TraceKit.computeStackTrace(exception);
-       var normalizedStackTrace = this.getNormalizedStackTrace(computedException.stack);
+    /**
+     * Normalize stacktrace for use with Sentry
+     *
+     * @method getNormalizedStackTrace
+     * @param stack
+     * @returns {Array}
+     * @private
+     */
+    getNormalizedException: function (exception) {
+        var computedException = TraceKit.computeStackTrace(exception);
+        var normalizedStackTrace = this.getNormalizedStackTrace(computedException.stack);
 
-       arrayOfExceptions.pushObject({
-         type: computedException.name,
-         value: computedException.message,
-         stacktrace: {
-           frames: normalizedStackTrace
-         }
-       });
-       return arrayOfExceptions;
-     },
+        return {
+            type: computedException.name || computedException.type || 'Error',
+            value: computedException.message || computedException.value || 'Unspecified error',
+            stacktrace: {
+                frames: normalizedStackTrace
+            }
+        };
+    },
 
-     /**
-      * Returns url of file where the error was thrown
-      *
-      * @method getNameOfFile
-      * @param arrayOfExceptions
-      * @returns {String}
-      * @private
-      */
-     getNameOfFile: function (arrayOfExceptions) {
-       var stackRecords = arrayOfExceptions[arrayOfExceptions.length - 1].stacktrace.frames;
-       return stackRecords[stackRecords.length - 1].filename;
-     },
+    /**
+     * Recursive method which computes and returns array with exceptions.
+     * Each exception in array is transformed to proper format for use with Sentry.
+     *
+     * @method getArrayOfExceptionsFromException
+     * @param {BaseError} exception
+     * @param {[]} arrayOfExceptions
+     * @returns {[]}
+     * @private
+     */
+    getArrayOfExceptionsFromException: function (exception, arrayOfExceptions) {
+        if (!exception) {
+            return arrayOfExceptions;
+        }
 
-     /**
-       * Entry point for capturing exception with parents
-       *
-       * @method captureExceptionWithParents
-       * @param {BaseError} exception
-       * @param {Object} options
-       * @returns Raven
-       */
-      captureExceptionWithParents: function (exception, options) {
-          var arrayOfExceptions = this.getArrayOfExceptionsFromException(exception, []);
-          send(
-              objectMerge({
-                  exception: arrayOfExceptions,
-                  culprit: this.getNameOfFile(arrayOfExceptions),
-                  message: exception.message
-              }, options)
-          );
-          return Raven;
-      },
+        // extract previous
+        this.getArrayOfExceptionsFromException(exception.previous, arrayOfExceptions);
+
+        // normalize exception and push to array of exceptions
+        var normalizedException = this.getNormalizedException(exception);
+        arrayOfExceptions.pushObject(normalizedException);
+
+        console.log(arrayOfExceptions);
+        return arrayOfExceptions;
+    },
+
+    /**
+     * Returns url of file where the error was thrown
+     *
+     * @method getNameOfFile
+     * @param arrayOfExceptions
+     * @returns {String}
+     * @private
+     */
+    getNameOfFile: function (arrayOfExceptions) {
+        var stackRecords = arrayOfExceptions[arrayOfExceptions.length - 1].stacktrace.frames;
+        return stackRecords[stackRecords.length - 1].filename;
+    },
+
+    /**
+     * Entry point for capturing exception with parents
+     *
+     * @method captureExceptionWithParents
+     * @param {BaseError} exception
+     * @param {Object} options
+     * @returns Raven
+     */
+    captureExceptionWithParents: function (exception, options) {
+        var arrayOfExceptions = this.getArrayOfExceptionsFromException(exception, []);
+        send(
+            objectMerge({
+                exception: arrayOfExceptions,
+                culprit: this.getNameOfFile(arrayOfExceptions),
+                message: exception.message
+            }, options)
+        );
+        return Raven;
+    },
 
 
   /*********************************************************************
