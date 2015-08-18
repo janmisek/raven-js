@@ -1,4 +1,4 @@
-/*! Raven.js 1.2.1 (499584b) | github.com/getsentry/raven-js */
+/*! Raven.js 1.2.1 (800e516) | github.com/getsentry/raven-js */
 
 /*
  * Includes TraceKit
@@ -1360,11 +1360,11 @@ var Raven = {
     },
 
     /**
-     * Normalize stacktrace for use with Sentry
+     * Normalize exception for use with Sentry
      *
-     * @method getNormalizedStackTrace
-     * @param stack
-     * @returns {Array}
+     * @method getNormalizedException
+     * @param exception
+     * @returns {Object}
      * @private
      */
     getNormalizedException: function (exception) {
@@ -1402,7 +1402,6 @@ var Raven = {
         var normalizedException = this.getNormalizedException(exception);
         arrayOfExceptions.pushObject(normalizedException);
 
-        console.log(arrayOfExceptions);
         return arrayOfExceptions;
     },
 
