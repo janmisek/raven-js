@@ -1,4 +1,4 @@
-/*! Raven.js 1.2.1 (800e516) | github.com/getsentry/raven-js */
+/*! Raven.js 1.2.1 (8e04433) | github.com/getsentry/raven-js */
 
 /*
  * Includes TraceKit
@@ -1329,53 +1329,54 @@ var Raven = {
      * Normalize stacktrace for use with Sentry
      *
      * @method getNormalizedStackTrace
-     * @param stack
+     * @param tcException
      * @returns {Array}
      * @private
      */
-    getNormalizedStackTrace: function(stack) {
-        var normalizedStackTrace = [];
-        if (stack && stack.length) {
-            for (var i = stack.length - 1; i >= 0; i-- ) {
-                normalizedStackTrace.push({
-                    filename: stack[i].url,
-                    lineno: stack[i].line,
-                    colno: stack[i].column,
-                    'function': stack[i].func || '?',
-                    post_context: stack[i].context[4],
-                    context_line: stack[i].context[3],
-                    pre_context: stack[i].context[2]
-                });
-            }
-        } else {
-            normalizedStackTrace.push({
+    getNormalizedStackTrace: function(tcException) {
+        var frames = [];
+
+        // process frames of stack trace
+        if (tcException.stack && tcException.stack.length) {
+            each(tcException.stack, function(i, row) {
+                var normalized = normalizeFrame(row);
+                frames.unshift(normalized);
+            });
+        }
+
+        // add empty frame if frames are empty
+        if (!frames.length) {
+            frames.push({
                 filename: 'undefined',
                 lineno: 0,
                 colno: 0,
                 'function': 'undefined'
             });
-
         }
-        return normalizedStackTrace;
+
+        return frames;
     },
 
     /**
-     * Normalize exception for use with Sentry
+     * Normalize stacktrace for use with Sentry
      *
-     * @method getNormalizedException
-     * @param exception
-     * @returns {Object}
+     * @method getNormalizedStackTrace
+     * @param stack
+     * @returns {Array}
      * @private
      */
     getNormalizedException: function (exception) {
-        var computedException = TraceKit.computeStackTrace(exception);
-        var normalizedStackTrace = this.getNormalizedStackTrace(computedException.stack);
+        // parse exception traceKitException (tcException)
+        var tcException = TraceKit.computeStackTrace(exception);
+        var frames = this.getNormalizedStackTrace(tcException);
 
+        // return normalized exception to be sent to sentry
         return {
-            type: computedException.name || computedException.type || 'Error',
-            value: computedException.message || computedException.value || 'Unspecified error',
+            type: tcException.name || tcException.type || 'Error',
+            value: tcException.message || tcException.value || 'Unspecified error',
+            filename: frames[0].filename,
             stacktrace: {
-                frames: normalizedStackTrace
+                frames: frames
             }
         };
     },
@@ -1384,38 +1385,27 @@ var Raven = {
      * Recursive method which computes and returns array with exceptions.
      * Each exception in array is transformed to proper format for use with Sentry.
      *
-     * @method getArrayOfExceptionsFromException
+     * @method parseAdvancedException
      * @param {BaseError} exception
      * @param {[]} arrayOfExceptions
      * @returns {[]}
      * @private
      */
-    getArrayOfExceptionsFromException: function (exception, arrayOfExceptions) {
+    parseAdvancedException: function (exception, arrayOfExceptions) {
         if (!exception) {
             return arrayOfExceptions;
         }
 
+        arrayOfExceptions = arrayOfExceptions || [];
+
         // extract previous
-        this.getArrayOfExceptionsFromException(exception.previous, arrayOfExceptions);
+        this.parseAdvancedException(exception.previous, arrayOfExceptions);
 
         // normalize exception and push to array of exceptions
         var normalizedException = this.getNormalizedException(exception);
         arrayOfExceptions.pushObject(normalizedException);
 
         return arrayOfExceptions;
-    },
-
-    /**
-     * Returns url of file where the error was thrown
-     *
-     * @method getNameOfFile
-     * @param arrayOfExceptions
-     * @returns {String}
-     * @private
-     */
-    getNameOfFile: function (arrayOfExceptions) {
-        var stackRecords = arrayOfExceptions[arrayOfExceptions.length - 1].stacktrace.frames;
-        return stackRecords[stackRecords.length - 1].filename;
     },
 
     /**
@@ -1426,15 +1416,22 @@ var Raven = {
      * @param {Object} options
      * @returns Raven
      */
-    captureExceptionWithParents: function (exception, options) {
-        var arrayOfExceptions = this.getArrayOfExceptionsFromException(exception, []);
-        send(
-            objectMerge({
-                exception: arrayOfExceptions,
-                culprit: this.getNameOfFile(arrayOfExceptions),
-                message: exception.message
-            }, options)
-        );
+    captureAdvancedException: function (exception, options) {
+        if (exception.advancedException) {
+            var arrayOfExceptions = this.parseAdvancedException(exception);
+            if (arrayOfExceptions.length) {
+                send(
+                    objectMerge({
+                        exception: arrayOfExceptions,
+                        culprit: arrayOfExceptions[arrayOfExceptions.length-1].filename,
+                        message: exception.message
+                    }, options)
+                );
+            }
+        } else {
+            this.captureException(exception, options);
+        }
+
         return Raven;
     },
 
