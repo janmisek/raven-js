@@ -1,4 +1,4 @@
-/*! Raven.js 1.2.1 (8e04433) | github.com/getsentry/raven-js */
+/*! Raven.js 1.2.1 (458c478) | github.com/getsentry/raven-js */
 
 /*
  * Includes TraceKit
@@ -1417,25 +1417,21 @@ var Raven = {
      * @returns Raven
      */
     captureAdvancedException: function (exception, options) {
-        try {
-            if (exception.advancedException) {
-                var arrayOfExceptions = this.parseAdvancedException(exception);
-                if (arrayOfExceptions.length) {
-                    send(
-                        objectMerge({
-                            exception: arrayOfExceptions,
-                            culprit: arrayOfExceptions[arrayOfExceptions.length-1].filename,
-                            message: exception.message
-                        }, options)
-                    );
-                }
-            } else {
-                this.captureException(exception, options);
+        if (exception.advancedException) {
+            var arrayOfExceptions = this.parseAdvancedException(exception);
+            if (arrayOfExceptions.length) {
+                send(
+                    objectMerge({
+                        exception: arrayOfExceptions,
+                        culprit: arrayOfExceptions[arrayOfExceptions.length-1].filename,
+                        message: exception.message
+                    }, options)
+                );
             }
-
-        } catch (e) {
-            console.log('There was error during raven logging', e);
+        } else {
+            this.captureException(exception, options);
         }
+
         return Raven;
     },
 
