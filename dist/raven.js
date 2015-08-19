@@ -1,4 +1,4 @@
-/*! Raven.js 1.2.1 (458c478) | github.com/getsentry/raven-js */
+/*! Raven.js 1.2.1 (a3d7cf3) | github.com/getsentry/raven-js */
 
 /*
  * Includes TraceKit
@@ -1372,8 +1372,8 @@ var Raven = {
 
         // return normalized exception to be sent to sentry
         return {
-            type: tcException.name || tcException.type || 'Error',
-            value: tcException.message || tcException.value || 'Unspecified error',
+            type: exception.name || tcException.name || tcException.type || 'Error',
+            value: exception.message || tcException.message || tcException.value || 'Unspecified error',
             filename: frames[0].filename,
             stacktrace: {
                 frames: frames
@@ -1417,19 +1417,23 @@ var Raven = {
      * @returns Raven
      */
     captureAdvancedException: function (exception, options) {
-        if (exception.advancedException) {
-            var arrayOfExceptions = this.parseAdvancedException(exception);
-            if (arrayOfExceptions.length) {
-                send(
-                    objectMerge({
-                        exception: arrayOfExceptions,
-                        culprit: arrayOfExceptions[arrayOfExceptions.length-1].filename,
-                        message: exception.message
-                    }, options)
-                );
+        try {
+            if (exception.advancedException) {
+                var arrayOfExceptions = this.parseAdvancedException(exception);
+                if (arrayOfExceptions.length) {
+                    send(
+                        objectMerge({
+                            exception: arrayOfExceptions,
+                            culprit: arrayOfExceptions[arrayOfExceptions.length - 1].filename,
+                            message: exception.message
+                        }, options)
+                    );
+                }
+            } else {
+                this.captureException(exception, options);
             }
-        } else {
-            this.captureException(exception, options);
+        } catch (e) {
+            console.log('There was error during raven logging', e);
         }
 
         return Raven;
