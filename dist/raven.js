@@ -1417,21 +1417,25 @@ var Raven = {
      * @returns Raven
      */
     captureAdvancedException: function (exception, options) {
-        if (exception.advancedException) {
-            var arrayOfExceptions = this.parseAdvancedException(exception);
-            if (arrayOfExceptions.length) {
-                send(
-                    objectMerge({
-                        exception: arrayOfExceptions,
-                        culprit: arrayOfExceptions[arrayOfExceptions.length-1].filename,
-                        message: exception.message
-                    }, options)
-                );
+        try {
+            if (exception.advancedException) {
+                var arrayOfExceptions = this.parseAdvancedException(exception);
+                if (arrayOfExceptions.length) {
+                    send(
+                        objectMerge({
+                            exception: arrayOfExceptions,
+                            culprit: arrayOfExceptions[arrayOfExceptions.length-1].filename,
+                            message: exception.message
+                        }, options)
+                    );
+                }
+            } else {
+                this.captureException(exception, options);
             }
-        } else {
-            this.captureException(exception, options);
-        }
 
+        } catch (e) {
+            console.log('There was error during raven logging', e);
+        }
         return Raven;
     },
 
