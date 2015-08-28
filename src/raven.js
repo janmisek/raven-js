@@ -269,9 +269,6 @@ var Raven = {
     /**
      * Normalize stacktrace for use with Sentry
      *
-     * @method getNormalizedStackTrace
-     * @param tcException
-     * @returns {Array}
      * @private
      */
     getNormalizedStackTrace: function(tcException) {
@@ -299,11 +296,21 @@ var Raven = {
     },
 
     /**
+     * Extract name of strange error
+     *
+     * @private
+     */
+    extractStrangeErrorName: function(error) {
+        if (!error) {
+            return 'Error';
+        } else {
+            return Error.toString()
+        }
+    },
+
+    /**
      * Normalize stacktrace for use with Sentry
      *
-     * @method getNormalizedStackTrace
-     * @param stack
-     * @returns {Array}
      * @private
      */
     getNormalizedException: function (exception) {
@@ -313,7 +320,7 @@ var Raven = {
 
         // return normalized exception to be sent to sentry
         return {
-            type: exception.name || tcException.name || tcException.type || 'Error',
+            type: exception.name || tcException.name || tcException.type || this.extractStrangeErrorName(exception),
             value: exception.message || tcException.message || tcException.value || 'Unspecified error',
             filename: frames[0].filename,
             stacktrace: {
@@ -326,10 +333,6 @@ var Raven = {
      * Recursive method which computes and returns array with exceptions.
      * Each exception in array is transformed to proper format for use with Sentry.
      *
-     * @method parseAdvancedException
-     * @param {BaseError} exception
-     * @param {[]} arrayOfExceptions
-     * @returns {[]}
      * @private
      */
     parseAdvancedException: function (exception, arrayOfExceptions) {
@@ -351,11 +354,6 @@ var Raven = {
 
     /**
      * Entry point for capturing exception with parents
-     *
-     * @method captureExceptionWithParents
-     * @param {BaseError} exception
-     * @param {Object} options
-     * @returns Raven
      */
     captureAdvancedException: function (exception, options) {
         try {
