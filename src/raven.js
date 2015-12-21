@@ -254,41 +254,32 @@ var Raven = {
     },
 
 
-  /*********************************************************************
-   *********************************************************************
-   *********************************************************************
-   *********************************************************************
-   *********************************************************************
-   BEGIN OF FORK CHANGES
-   *********************************************************************
-   *********************************************************************
-   *********************************************************************
-   *********************************************************************
-   */
+
+    /*********************************************************************
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     BEGIN OF FORK CHANGES
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     */
 
     /**
      * Normalize stacktrace for use with Sentry
      *
      * @private
      */
-    getNormalizedStackTrace: function(tcException) {
+    getNormalizedStackTrace: function (tcException) {
         var frames = [];
 
         // process frames of stack trace
         if (tcException.stack && tcException.stack.length) {
-            each(tcException.stack, function(i, row) {
+            each(tcException.stack, function (i, row) {
                 var normalized = normalizeFrame(row);
                 frames.unshift(normalized);
-            });
-        }
-
-        // add empty frame if frames are empty
-        if (!frames.length) {
-            frames.push({
-                filename: 'undefined',
-                lineno: 0,
-                colno: 0,
-                'function': 'undefined'
             });
         }
 
@@ -300,11 +291,11 @@ var Raven = {
      *
      * @private
      */
-    extractStrangeErrorName: function(error) {
+    extractErrorName: function (error) {
         if (!error) {
             return 'Error';
         } else {
-            return Error.toString()
+            return error.toString();
         }
     },
 
@@ -314,19 +305,33 @@ var Raven = {
      * @private
      */
     getNormalizedException: function (exception) {
-        // parse exception traceKitException (tcException)
-        var tcException = TraceKit.computeStackTrace(exception);
-        var frames = this.getNormalizedStackTrace(tcException);
 
-        // return normalized exception to be sent to sentry
-        return {
-            type: exception.name || tcException.name || tcException.type || this.extractStrangeErrorName(exception),
-            value: exception.message || tcException.message || tcException.value || 'Unspecified error',
-            filename: frames[0].filename,
+        var normalized = {
+            type: typeof exception,
+            value: 'Unspecified error',
+            filename: undefined,
             stacktrace: {
-                frames: frames
+                frames: []
             }
         };
+
+        if (exception) {
+
+            // parse exception traceKitException (tcException)
+            var tcException = TraceKit.computeStackTrace(exception);
+            var frames = this.getNormalizedStackTrace(tcException);
+
+            // return normalized exception to be sent to sentry
+            normalized.type = exception.name || tcException.name || tcException.type || typeof exception;
+            normalized.value = exception.message || tcException.message || tcException.value || this.extractErrorName(exception) || 'Unspecified error';
+            normalized.filename = frames.length ? frames[0].filename : undefined;
+            normalized.stacktrace.frames = frames;
+
+        }
+
+        return normalized;
+
+
     },
 
     /**
@@ -335,21 +340,16 @@ var Raven = {
      *
      * @private
      */
-    parseAdvancedException: function (exception, arrayOfExceptions) {
-        if (!exception) {
-            return arrayOfExceptions;
+    parseAdvancedExceptions: function (exception) {
+        var exceptions = [];
+        var next = true;
+        while (next) {
+            exceptions.push(this.getNormalizedException(exception));
+            next = exception && exception.previous;
+            exception = exception ? exception.previous : null;
         }
 
-        arrayOfExceptions = arrayOfExceptions || [];
-
-        // extract previous
-        this.parseAdvancedException(exception.previous, arrayOfExceptions);
-
-        // normalize exception and push to array of exceptions
-        var normalizedException = this.getNormalizedException(exception);
-        arrayOfExceptions.pushObject(normalizedException);
-
-        return arrayOfExceptions;
+        return exceptions.reverse();
     },
 
     /**
@@ -357,20 +357,20 @@ var Raven = {
      */
     captureAdvancedException: function (exception, options) {
         try {
-            if (exception.advancedException) {
-                var arrayOfExceptions = this.parseAdvancedException(exception);
-                if (arrayOfExceptions.length) {
-                    send(
-                        objectMerge({
-                            exception: arrayOfExceptions,
-                            culprit: arrayOfExceptions[arrayOfExceptions.length - 1].filename,
-                            message: exception.message
-                        }, options)
-                    );
-                }
-            } else {
-                this.captureException(exception, options);
-            }
+
+            // extract exceptions
+            var exceptions = this.parseAdvancedExceptions(exception);
+            var last = exceptions.length - 1;
+            var data = objectMerge({
+                exception: exceptions,
+                culprit: exceptions[last].filename,
+                message: exceptions[last].type + ': ' + exceptions[last].value
+            }, options);
+
+
+            // send to remote
+            send(data);
+
         } catch (e) {
             console.log('There was error during raven logging', e);
         }
@@ -379,21 +379,21 @@ var Raven = {
     },
 
 
-  /*********************************************************************
-   *********************************************************************
-   *********************************************************************
-   *********************************************************************
-   *********************************************************************
+    /*********************************************************************
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
 
-   END OF FORK CHANGES
+     END OF FORK CHANGES
 
-   *********************************************************************
-   *********************************************************************
-   *********************************************************************
-   *********************************************************************
-   *********************************************************************
-   *********************************************************************
-   */
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     */
 
     /*
      * Manually send a message to Sentry
