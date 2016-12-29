@@ -1,20 +1,20 @@
 {
   "@dist/raven.js": {
     "hashes": {
-      "sha256": "ihdEI9/hV9q/+yUm+WxgLgncmbFnuK9tr/lRnRgr60k=",
-      "sha512": "4WMClk7qzYHXT5/xR3X9RkpNs8dg/FIfbJ7RTythr9rXMRAVIDimD2X6NLEUdID+c7sJ3b6oOvsmf6oB0ORhwg=="
+      "sha256": "yE5Gkc385jrSYIuQiLogok0h7CbAiRcVykIJ83W1L3k=",
+      "sha512": "tL3SNGNP76ncXxaZHirSZ2qtAl4ecO09XH4ZbLtL8ewx6pG091c1pCMORfOkUCGOp5vTVG/FvGlDvtBVwRiKPg=="
     },
     "type": null,
-    "integrity": "sha256-ihdEI9/hV9q/+yUm+WxgLgncmbFnuK9tr/lRnRgr60k= sha512-4WMClk7qzYHXT5/xR3X9RkpNs8dg/FIfbJ7RTythr9rXMRAVIDimD2X6NLEUdID+c7sJ3b6oOvsmf6oB0ORhwg==",
+    "integrity": "sha256-yE5Gkc385jrSYIuQiLogok0h7CbAiRcVykIJ83W1L3k= sha512-tL3SNGNP76ncXxaZHirSZ2qtAl4ecO09XH4ZbLtL8ewx6pG091c1pCMORfOkUCGOp5vTVG/FvGlDvtBVwRiKPg==",
     "path": "dist/raven.js"
   },
   "@dist/raven.min.js": {
     "hashes": {
-      "sha256": "Iwsp4zEtQhPhOFbMNyTevyNpy7XTm8qUPteSJyopHDM=",
-      "sha512": "lL3X3M9f+DKT/mcKDJWixbXdXhVlYGWxy5DuPYyV6LrD8KNWQJ6ahpvTK3IyosXEAj3x+PWQ1DnFbKyGbIGdBw=="
+      "sha256": "uJQ6sgo8cIASw0yMa6AzorTOvxgfcURYsUkQ1YJFNXM=",
+      "sha512": "+bwNnvYtBG5Js1NzqtgRVRHSQU5DMIQ6XLS3lU78GHVjUDGdm/Tmf3wOiw7z32IIMXga6MTJcFHWWFlH34mvLg=="
     },
     "type": null,
-    "integrity": "sha256-Iwsp4zEtQhPhOFbMNyTevyNpy7XTm8qUPteSJyopHDM= sha512-lL3X3M9f+DKT/mcKDJWixbXdXhVlYGWxy5DuPYyV6LrD8KNWQJ6ahpvTK3IyosXEAj3x+PWQ1DnFbKyGbIGdBw==",
+    "integrity": "sha256-uJQ6sgo8cIASw0yMa6AzorTOvxgfcURYsUkQ1YJFNXM= sha512-+bwNnvYtBG5Js1NzqtgRVRHSQU5DMIQ6XLS3lU78GHVjUDGdm/Tmf3wOiw7z32IIMXga6MTJcFHWWFlH34mvLg==",
     "path": "dist/raven.min.js"
   }
 }

@@ -1,4 +1,4 @@
-/*! Raven.js 3.9.1 (7bbae7d) | github.com/getsentry/raven-js */
+/*! Raven.js 3.9.1a (a3e387f) | github.com/getsentry/raven-js */
 
 /*
  * Includes TraceKit
@@ -172,7 +172,7 @@ Raven.prototype = {
     // webpack (using a build step causes webpack #1617). Grunt verifies that
     // this value matches package.json during build.
     //   See: https://github.com/getsentry/raven-js/issues/465
-    VERSION: '3.9.1',
+    VERSION: '3.9.1a',
 
     debug: false,
 
@@ -445,6 +445,130 @@ Raven.prototype = {
 
         return this;
     },
+
+    /*********************************************************************
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     BEGIN OF FORK CHANGES
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     */
+
+    /**
+     * Extract name of strange error
+     *
+     * @private
+     */
+    extractErrorName: function (error) {
+        if (!error) {
+            return 'Error';
+        } else {
+            return error.toString();
+        }
+    },
+
+    /**
+     * Normalize stacktrace for use with Sentry
+     *
+     * @private
+     */
+    getNormalizedException: function (exception) {
+
+        var normalized = {
+            type: typeof exception,
+            value: 'Unspecified error',
+            filename: undefined,
+            stacktrace: {
+                frames: []
+            }
+        };
+
+        if (exception) {
+
+            // parse exception traceKitException (tcException)
+            var tcException = TraceKit.computeStackTrace(exception);
+            var frames = this._prepareFrames(tcException);
+
+            // return normalized exception to be sent to sentry
+            normalized.type = exception.name || tcException.name || tcException.type || typeof exception;
+            normalized.value = exception.message || tcException.message || tcException.value || this.extractErrorName(exception) || 'Unspecified error';
+            normalized.filename = frames.length ? frames[0].filename : undefined;
+            normalized.stacktrace.frames = frames;
+
+        }
+
+        return normalized;
+
+
+    },
+
+    /**
+     * Recursive method which computes and returns array with exceptions.
+     * Each exception in array is transformed to proper format for use with Sentry.
+     *
+     * @private
+     */
+    parseAdvancedExceptions: function (exception) {
+        var exceptions = [];
+        var next = true;
+        while (next) {
+            exceptions.push(this.getNormalizedException(exception));
+            next = exception && exception.previous;
+            exception = exception ? exception.previous : null;
+        }
+
+        var sourceException = exceptions[exceptions.length - 1];
+        if (!!this._globalOptions.ignoreErrors.test && this._globalOptions.ignoreErrors.test(sourceException.value)) return;
+        if (!!this._globalOptions.ignoreUrls.test && this._globalOptions.ignoreUrls.test(sourceException.filename)) return;
+        if (!!this._globalOptions.whitelistUrls.test && !this._globalOptions.whitelistUrls.test(sourceException.filename)) return;
+
+        return exceptions.reverse();
+    },
+
+    /**
+     * Entry point for capturing exception with parents
+     */
+    captureAdvancedException: function (exception, options) {
+        try {
+
+            // extract exceptions
+            var exceptions = this.parseAdvancedExceptions(exception);
+            var last = exceptions.length - 1;
+            var data = objectMerge({
+                exception: exceptions,
+                culprit: exceptions[last].filename,
+                message: exceptions[last].type + ': ' + exceptions[last].value
+            }, options);
+
+
+            // send to remote
+            this._send(data);
+
+        } catch (e) {
+            console.log('There was error during raven logging', e);
+        }
+
+        return this;
+    },
+
+
+    /*********************************************************************
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     END OF FORK CHANGES
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     *********************************************************************
+     */
 
     /*
      * Manually send a message to Sentry
