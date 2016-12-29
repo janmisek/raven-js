@@ -427,6 +427,11 @@ Raven.prototype = {
             exception = exception ? exception.previous : null;
         }
 
+        var sourceException = exceptions[exceptions.length - 1];
+        if (!!this._globalOptions.ignoreErrors.test && this._globalOptions.ignoreErrors.test(sourceException.value)) return;
+        if (!!this._globalOptions.ignoreUrls.test && this._globalOptions.ignoreUrls.test(sourceException.filename)) return;
+        if (!!this._globalOptions.whitelistUrls.test && !this._globalOptions.whitelistUrls.test(sourceException.filename)) return;
+
         return exceptions.reverse();
     },
 
