@@ -1,4 +1,4 @@
-/*! Raven.js 3.9.1a (a3829f0) | github.com/getsentry/raven-js */
+/*! Raven.js 3.9.1a (7cab497) | github.com/getsentry/raven-js */
 
 /*
  * Includes TraceKit
@@ -1514,12 +1514,11 @@ Raven.prototype = {
         }
 
         // fork note: original function has unclear purpose (when you look at the code)
-        // so I simply replicated it's behavior for all passed exceptions
+        // so I simply replicated it's behavior for all passed exceptions (adjusted for the structure of advancedException)
         if (data.exception) {
             if (data.exception.length) {
                 data.exception.forEach(function (exception) {
-                    var values = exception.values[0];
-                    values.value = truncate(values.value, max);
+                    exception.value = truncate(exception.value, max);
                 });
             } else {
                 var exception = data.exception.values[0];
