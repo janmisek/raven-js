@@ -1,4 +1,4 @@
-/*! Raven.js 3.9.1a (a3e387f) | github.com/getsentry/raven-js */
+/*! Raven.js 3.9.1a (a3829f0) | github.com/getsentry/raven-js */
 
 /*
  * Includes TraceKit
@@ -457,6 +457,8 @@ Raven.prototype = {
      *********************************************************************
      *********************************************************************
      */
+
+    /* Includes minor changes to _trimPacket and _sendProcessedPayload */
 
     /**
      * Extract name of strange error
@@ -1510,9 +1512,19 @@ Raven.prototype = {
         if (data.message) {
             data.message = truncate(data.message, max);
         }
+
+        // fork note: original function has unclear purpose (when you look at the code)
+        // so I simply replicated it's behavior for all passed exceptions
         if (data.exception) {
-            var exception = data.exception.values[0];
-            exception.value = truncate(exception.value, max);
+            if (data.exception.length) {
+                data.exception.forEach(function (exception) {
+                    var values = exception.values[0];
+                    values.value = truncate(values.value, max);
+                });
+            } else {
+                var exception = data.exception.values[0];
+                exception.value = truncate(exception.value, max);
+            }
         }
 
         return data;
@@ -1635,7 +1647,8 @@ Raven.prototype = {
             auth.sentry_secret = this._globalSecret;
         }
 
-        var exception = data.exception && data.exception.values[0];
+        var exception = data.exception && data.exception.values && data.exception.values[0];
+        exception = exception || data.exception[0].value;
         this.captureBreadcrumb({
             category: 'sentry',
             message: exception
